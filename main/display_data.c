@@ -22,7 +22,7 @@ void display_data(SSD1306_t * dev, parser_t *parser)
     sprintf(latitude, " Lat: %.3f", parser->gps.latitude);
     sprintf(altitude, " Alt: %.3f", parser->gps.altitude);
     sprintf(hdop, " HDOP: %.3f", parser->gps.hdop);
-    sprintf(time, " %02d:%02d:%02d", parser->gps.time.hour,parser->gps.time.minute, parser->gps.time.second);
+    sprintf(time, " %02d:%02d:%02d", parser->gps.time.hour+2,parser->gps.time.minute, parser->gps.time.second);
     sprintf(sats, " Sats: %d", parser->gps.satellites_in_use);
     sprintf(speed, " Speed: %.2f", parser->gps.speed);
     if(parser->gps.fix_mode == 1){
