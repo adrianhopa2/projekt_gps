@@ -26,6 +26,12 @@ uint8_t buffer[BUFF_SIZE];
 #define GPS_UART_TX_PIN        17     // TX 
 #define GPS_UART_RX_PIN        16     // RX
 
+struct params
+{
+    SSD1306_t dev;
+    parser_t parser;
+};
+
 static void uart_init(){
     uart_config_t uart_config = {
         .baud_rate = 9600,
@@ -45,21 +51,12 @@ static void uart_init(){
 
 }
 
-void app_main(void)
-{
-   	SSD1306_t dev;
-
-    gpio_num_t CONFIG_GPIO_SDA = GPIO_NUM_21;
-    gpio_num_t CONFIG_GPIO_SCL = GPIO_NUM_22;
-    gpio_num_t CONFIG_GPIO_RES = GPIO_NUM_15;
-
-	i2c_master_init(&dev, CONFIG_GPIO_SDA, CONFIG_GPIO_SCL, CONFIG_GPIO_RES);
-    ssd1306_init(&dev, 128, 64);
-
-	init_screen(&dev);
-
-	uart_init();
+void main_task(void* parameter)
+{   
     parser_t parser;
+
+    SSD1306_t* dev = (SSD1306_t*)parameter;
+
     while (1){
         int pos = uart_pattern_pop_pos(GPS_UART_PORT_NUM);
         //ESP_LOGI(TAG, "pos: %d", pos);
@@ -78,9 +75,27 @@ void app_main(void)
 
             }
             //show_data(&parser);
-            display_data(&dev, &parser);
+            display_data(dev, &parser);
         } else {
             vTaskDelay(pdMS_TO_TICKS(10));
         }
     }
+}
+
+void app_main(void)
+{
+   	SSD1306_t dev;
+
+    gpio_num_t CONFIG_GPIO_SDA = GPIO_NUM_21;
+    gpio_num_t CONFIG_GPIO_SCL = GPIO_NUM_22;
+    gpio_num_t CONFIG_GPIO_RES = GPIO_NUM_15;
+
+	i2c_master_init(&dev, CONFIG_GPIO_SDA, CONFIG_GPIO_SCL, CONFIG_GPIO_RES);
+    ssd1306_init(&dev, 128, 64);
+
+	init_screen(&dev);
+	uart_init();
+
+    xTaskCreate(main_task, "Main task", 10240, &dev, 1, NULL);
+    vTaskDelete(NULL);
 }
