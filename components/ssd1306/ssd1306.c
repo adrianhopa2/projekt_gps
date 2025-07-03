@@ -8,13 +8,6 @@
 #include "ssd1306.h"
 #include "font8x8_basic.h"
 
-#define PACK8 __attribute__((aligned( __alignof__( uint8_t ) ), packed ))
-
-typedef union out_column_t {
-	uint32_t u32;
-	uint8_t  u8[4];
-} PACK8 out_column_t;
-
 void ssd1306_init(SSD1306_t * dev, int width, int height)
 {
 	i2c_init(dev, width, height);
@@ -23,14 +16,6 @@ void ssd1306_init(SSD1306_t * dev, int width, int height)
 	for (int i=0;i<dev->_pages;i++) {
 		memset(dev->_page[i]._segs, 0, 128);
 	}
-}
-
-void ssd1306_display_image(SSD1306_t * dev, int page, int seg, const uint8_t * images, int width)
-{
-	i2c_display_image(dev, page, seg, images, width);
-
-	// Set to internal buffer
-	memcpy(&dev->_page[page]._segs[seg], images, width);
 }
 
 void ssd1306_display_text(SSD1306_t * dev, int page, const char * text, int text_len, bool invert)
@@ -45,7 +30,9 @@ void ssd1306_display_text(SSD1306_t * dev, int page, const char * text, int text
 		memcpy(image, font8x8_basic_tr[(uint8_t)text[i]], 8);
 		if (invert) ssd1306_invert(image, 8);
 		if (dev->_flip) ssd1306_flip(image, 8);
-		ssd1306_display_image(dev, page, seg, image, 8);
+		i2c_display_image(dev, page, seg, image, 8);
+		// Set to internal buffer
+		memcpy(&dev->_page[page]._segs[seg], image, 8);
 		seg = seg + 8;
 	}
 }

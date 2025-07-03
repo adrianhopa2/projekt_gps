@@ -72,8 +72,6 @@ typedef enum {
 } ssd1306_scroll_type_t;
 
 typedef struct {
-	bool _valid; // Not using it anymore
-	int _segLen; // Not using it anymore
 	uint8_t _segs[128];
 } PAGE_t;
 
@@ -101,7 +99,6 @@ extern "C"
 
 void ssd1306_init(SSD1306_t * dev, int width, int height);
 
-void ssd1306_display_image(SSD1306_t * dev, int page, int seg, const uint8_t * images, int width);
 void ssd1306_display_text(SSD1306_t * dev, int page, const char * text, int text_len, bool invert);
 void ssd1306_invert(uint8_t *buf, size_t blen);
 void ssd1306_flip(uint8_t *buf, size_t blen);
