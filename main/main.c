@@ -104,7 +104,7 @@ void app_main(void)
 	init_screen(&dev);
 	uart_init();
 
-    xTaskCreate(parser_task, "Parser task", 4096, NULL, 1, NULL);
-    xTaskCreate(display_task, "Display task", 4096, &dev, 2, NULL);
+    xTaskCreate(parser_task, "Parser task", 4096, NULL, 2, NULL);
+    xTaskCreate(display_task, "Display task", 4096, &dev, 1, NULL);
     vTaskDelete(NULL);
 }
