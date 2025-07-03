@@ -22,6 +22,8 @@ QueueHandle_t uart_queue;
 
 parser_t parser;
 
+SemaphoreHandle_t xSem;
+
 uint8_t buffer[BUFF_SIZE];
 
 #define GPS_UART_PORT_NUM      UART_NUM_2
@@ -57,7 +59,10 @@ void display_task(void* parameter)
 {
     SSD1306_t* dev = (SSD1306_t*)parameter;
 
+    xSemaphoreTake(xSem, 0);
+
     while(1){
+        xSemaphoreTake(xSem, portMAX_DELAY);
         display_data(dev, &parser);
     }
 }
@@ -67,23 +72,14 @@ void parser_task(void* parameter)
 
     while (1){
         int pos = uart_pattern_pop_pos(GPS_UART_PORT_NUM);
-        //ESP_LOGI(TAG, "pos: %d", pos);
         if (pos != -1) {
             int read_len = uart_read_bytes(GPS_UART_PORT_NUM, buffer, pos + 1, 100 / portTICK_PERIOD_MS);
             if (read_len > 0 && read_len < sizeof(buffer)) {
                 buffer[read_len] = '\0';
-                //ESP_LOGI(TAG, "Odebrano dane: %s", (char *)buffer);
                 separate_items(&parser, (char*) buffer);
-                // for (int i = 0; i < 10; i++) {
-                //     ESP_LOGI(TAG, "Itemek[%d]: %s", i, parser.sentence[i]);
-                // }
                 gps_decode(&parser);
-                
-                //ESP_LOGI(TAG, "Godzina: %d, Minuta: %d, Sekunda: %d", parser.gps.time.hour, parser.gps.time.minute, parser.gps.time.second);
-
             }
-            //show_data(&parser);
-            //display_data(dev, &parser);
+            xSemaphoreGive(xSem);
         } else {
             vTaskDelay(pdMS_TO_TICKS(10));
         }
@@ -104,7 +100,11 @@ void app_main(void)
 	init_screen(&dev);
 	uart_init();
 
+	xSem = xSemaphoreCreateBinary();
+
     xTaskCreate(parser_task, "Parser task", 4096, NULL, 2, NULL);
     xTaskCreate(display_task, "Display task", 4096, &dev, 1, NULL);
     vTaskDelete(NULL);
+
+    vTaskStartScheduler();
 }
