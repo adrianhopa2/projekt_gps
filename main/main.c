@@ -20,6 +20,8 @@ static const char *TAG = "UART TEST";
 
 QueueHandle_t uart_queue;
 
+parser_t parser;
+
 uint8_t buffer[BUFF_SIZE];
 
 #define GPS_UART_PORT_NUM      UART_NUM_2
@@ -51,11 +53,17 @@ static void uart_init(){
 
 }
 
-void main_task(void* parameter)
-{   
-    parser_t parser;
-
+void display_task(void* parameter)
+{
     SSD1306_t* dev = (SSD1306_t*)parameter;
+
+    while(1){
+        display_data(dev, &parser);
+    }
+}
+
+void parser_task(void* parameter)
+{   
 
     while (1){
         int pos = uart_pattern_pop_pos(GPS_UART_PORT_NUM);
@@ -75,7 +83,7 @@ void main_task(void* parameter)
 
             }
             //show_data(&parser);
-            display_data(dev, &parser);
+            //display_data(dev, &parser);
         } else {
             vTaskDelay(pdMS_TO_TICKS(10));
         }
@@ -96,6 +104,7 @@ void app_main(void)
 	init_screen(&dev);
 	uart_init();
 
-    xTaskCreate(main_task, "Main task", 10240, &dev, 1, NULL);
+    xTaskCreate(parser_task, "Parser task", 4096, NULL, 1, NULL);
+    xTaskCreate(display_task, "Display task", 4096, &dev, 1, NULL);
     vTaskDelete(NULL);
 }
