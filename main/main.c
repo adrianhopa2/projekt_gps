@@ -12,6 +12,8 @@
 #include "driver/i2c.h"
 #include "driver/gpio.h"
 
+#include "esp_sleep.h"
+
 #define I2C_NUM I2C_NUM_0
 #define I2C_MASTER_FREQ_HZ 400000
 #define I2C_TICKS_TO_WAIT 100
@@ -63,6 +65,7 @@ void display_task(void* parameter)
 
     while(1){
         xSemaphoreTake(xSem, portMAX_DELAY);
+        //ESP_LOGI(TAG, "\tDisplayed");
         display_data(dev, &parser);
     }
 }
@@ -72,6 +75,7 @@ void parser_task(void* parameter)
 
     while (1){
         int pos = uart_pattern_pop_pos(GPS_UART_PORT_NUM);
+        //ESP_LOGI(TAG, "pos: %d", pos);
         if (pos != -1) {
             int read_len = uart_read_bytes(GPS_UART_PORT_NUM, buffer, pos + 1, 100 / portTICK_PERIOD_MS);
             if (read_len > 0 && read_len < sizeof(buffer)) {
@@ -81,7 +85,7 @@ void parser_task(void* parameter)
             }
             xSemaphoreGive(xSem);
         } else {
-            vTaskDelay(pdMS_TO_TICKS(10));
+            vTaskDelay(10 / portTICK_PERIOD_MS);
         }
     }
 }
@@ -104,6 +108,7 @@ void app_main(void)
 
     xTaskCreate(parser_task, "Parser task", 4096, NULL, 2, NULL);
     xTaskCreate(display_task, "Display task", 4096, &dev, 1, NULL);
+    
     vTaskDelete(NULL);
 
     vTaskStartScheduler();
