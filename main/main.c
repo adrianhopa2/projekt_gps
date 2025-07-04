@@ -23,6 +23,7 @@ static const char *TAG = "UART TEST";
 QueueHandle_t uart_queue;
 
 parser_t parser;
+SSD1306_t dev;
 
 SemaphoreHandle_t xSem;
 
@@ -32,14 +33,7 @@ uint8_t buffer[BUFF_SIZE];
 #define GPS_UART_TX_PIN        17     // TX 
 #define GPS_UART_RX_PIN        16     // RX
 
-struct params
-{
-    SSD1306_t dev;
-    parser_t parser;
-};
-
-static void uart_init(){
-    uart_config_t uart_config = {
+uart_config_t uart_config = {
         .baud_rate = 9600,
         .data_bits = UART_DATA_8_BITS,
         .parity    = UART_PARITY_DISABLE,
@@ -48,25 +42,25 @@ static void uart_init(){
         .source_clk = UART_SCLK_DEFAULT,
     };
 
+static void uart_init(){
     uart_driver_install(GPS_UART_PORT_NUM, 1024 * 2, 0, 16, &uart_queue, 0);
     uart_param_config(GPS_UART_PORT_NUM, &uart_config);
     uart_set_pin(GPS_UART_PORT_NUM, GPS_UART_TX_PIN, GPS_UART_RX_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
     uart_enable_pattern_det_baud_intr(GPS_UART_PORT_NUM, '\r', 1, 9, 0, 0);
     uart_pattern_queue_reset(GPS_UART_PORT_NUM, 16);
     uart_flush(GPS_UART_PORT_NUM);
-
 }
 
 void display_task(void* parameter)
 {
-    SSD1306_t* dev = (SSD1306_t*)parameter;
-
     xSemaphoreTake(xSem, 0);
 
     while(1){
-        xSemaphoreTake(xSem, portMAX_DELAY);
-        //ESP_LOGI(TAG, "\tDisplayed");
-        display_data(dev, &parser);
+        if(pdTRUE == xSemaphoreTake(xSem, portMAX_DELAY))
+        {
+            //ESP_LOGI(TAG, "\tDisplayed");
+            display_data(&dev, &parser);
+        }
     }
 }
 
@@ -84,15 +78,16 @@ void parser_task(void* parameter)
                 gps_decode(&parser);
             }
             xSemaphoreGive(xSem);
-        } else {
+        } 
+        else {
             vTaskDelay(10 / portTICK_PERIOD_MS);
         }
+
     }
 }
 
 void app_main(void)
 {
-   	SSD1306_t dev;
 
     gpio_num_t CONFIG_GPIO_SDA = GPIO_NUM_21;
     gpio_num_t CONFIG_GPIO_SCL = GPIO_NUM_22;
@@ -107,8 +102,8 @@ void app_main(void)
 	xSem = xSemaphoreCreateBinary();
 
     xTaskCreate(parser_task, "Parser task", 4096, NULL, 2, NULL);
-    xTaskCreate(display_task, "Display task", 4096, &dev, 1, NULL);
-    
+    xTaskCreate(display_task, "Display task", 4096, NULL, 1, NULL);
+
     vTaskDelete(NULL);
 
     vTaskStartScheduler();
